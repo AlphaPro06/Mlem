@@ -9,6 +9,7 @@ import CachedAsyncImage
 import QuickLook
 import SwiftUI
 
+
 struct PostItem: View
 {
     @AppStorage("shouldShowUserAvatars") var shouldShowUserAvatars: Bool = true
@@ -30,6 +31,8 @@ struct PostItem: View
 
     @State private var isShowingSafari: Bool = false
     @State private var isShowingEnlargedImage: Bool = false
+    @State private var dragOffset = CGSize.zero
+    @State private var zoomScale: CGFloat = 1.0
 
     @State var isPostCollapsed: Bool = false
 
@@ -110,8 +113,10 @@ struct PostItem: View
                 {
                     if let postURL = post.url
                     {
+                        
                         if postURL.pathExtension.contains(["jpg", "jpeg", "png"]) /// The post is an image, so show an image
                         {
+                            
                             if !isPostCollapsed
                             {
                                 CachedAsyncImage(url: postURL)
@@ -129,10 +134,55 @@ struct PostItem: View
                                         {
                                             isShowingEnlargedImage.toggle()
                                         }
+                                        .onChange(of: isShowingEnlargedImage) { newValue in
+                                            if newValue == false
+                                            {
+                                                withAnimation {
+                                                    dragOffset = .zero
+                                                    zoomScale = 1.0
+                                                }
+                                            }
+                                        }
+                                        .fullScreenCover(isPresented: $isShowingEnlargedImage, content: {
+                                            ZStack {
+                                                let dragDistance = sqrt(pow(dragOffset.width, 2) + pow(dragOffset.height, 2))
+                                                Color.black.opacity(max(0, 1 - Double(dragDistance / 500))).ignoresSafeArea() // Adjust opacity here
+                                                image
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .scaleEffect(zoomScale)
+                                                    .offset(dragOffset)
+                                                    .gesture(
+                                                        DragGesture()
+                                                            .onChanged{gesture in
+                                                                dragOffset = gesture.translation}
+                                                            .onEnded{ value in
+                                                                withAnimation{
+                                                                    if abs(value.predictedEndTranslation.width) > 100 || abs(value.predictedEndTranslation.height) > 100
+                                                                    {
+                                                                        isShowingEnlargedImage = false
+                                                                        dragOffset = .zero
+                                                                    } else
+                                                                    {
+                                                                        dragOffset = .zero
+                                                                    }
+                                                                }
+                                                            }
+                                                            .simultaneously(with: MagnificationGesture().onChanged { scale in
+                                                                zoomScale = scale
+                                                            }.onEnded{ _ in
+                                                                zoomScale = 1.0
+                                                            })
+                                                   )
+                                                        
+                                                
+                                            }
+                                        })
                                 } placeholder: {
                                     ProgressView()
                                 }
                             }
+                            
                         }
                         else
                         {

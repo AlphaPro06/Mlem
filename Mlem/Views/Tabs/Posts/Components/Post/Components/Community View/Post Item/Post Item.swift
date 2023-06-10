@@ -162,6 +162,7 @@ struct PostItem: View
                                                                     {
                                                                         isShowingEnlargedImage = false
                                                                         dragOffset = .zero
+                                                                    } elragOffset = .zero
                                                                     } else
                                                                     {
                                                                         dragOffset = .zero

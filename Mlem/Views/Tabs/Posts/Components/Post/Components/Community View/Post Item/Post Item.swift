@@ -162,7 +162,6 @@ struct PostItem: View
                                                                     {
                                                                         isShowingEnlargedImage = false
                                                                         dragOffset = .zero
-                                                                    } elragOffset = .zero
                                                                     } else
                                                                     {
                                                                         dragOffset = .zero
@@ -172,7 +171,9 @@ struct PostItem: View
                                                             .simultaneously(with: MagnificationGesture().onChanged { scale in
                                                                 zoomScale = scale
                                                             }.onEnded{ _ in
-                                                                zoomScale = 1.0
+                                                                withAnimation {
+                                                                    zoomScale = 1.0
+                                                                }
                                                             })
                                                    )
                                                         

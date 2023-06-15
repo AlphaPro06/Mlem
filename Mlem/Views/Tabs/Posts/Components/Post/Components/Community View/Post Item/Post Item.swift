@@ -19,7 +19,7 @@ struct PostItem: View
 
     @State var postTracker: PostTracker
 
-    let post: Post
+    let post: APIPostView
 
     @State var isExpanded: Bool
 
@@ -74,7 +74,7 @@ struct PostItem: View
                                     .foregroundColor(.secondary)
                                 }
 
-                                if post.stickied
+                                if post.post.featuredLocal
                                 {
                                     Spacer()
 
@@ -82,7 +82,7 @@ struct PostItem: View
                                 }
                             }
 
-                            Text(post.name)
+                            Text(post.post.name)
                                 .font(.headline)
                         }
                     }
@@ -90,12 +90,12 @@ struct PostItem: View
                     { // Show this when the post is expanded
                         VStack(alignment: .leading, spacing: 5)
                         {
-                            if post.stickied
+                            if post.post.featuredLocal
                             {
                                 StickiedTag()
                             }
 
-                            Text(post.name)
+                            Text(post.post.name)
                                 .font(.headline)
                         }
                         .onTapGesture
@@ -111,7 +111,7 @@ struct PostItem: View
 
                 VStack(alignment: .leading)
                 {
-                    if let postURL = post.url
+                    if let postURL = post.post.url
                     {
                         
                         if postURL.pathExtension.contains(["jpg", "jpeg", "png"]) /// The post is an image, so show an image
@@ -188,18 +188,11 @@ struct PostItem: View
                         }
                         else
                         {
-                            if post.embedTitle != nil
-                            {
-                                WebsiteIconComplex(post: post)
-                            }
-                            else
-                            {
-                                WebsiteIconComplex(post: post)
-                            }
+                            WebsiteIconComplex(post: post.post)
                         }
                     }
 
-                    if let postBody = post.body
+                    if let postBody = post.post.body
                     {
                         if !postBody.isEmpty
                         {
@@ -238,14 +231,14 @@ struct PostItem: View
                     {
                         Image(systemName: "arrow.up")
 
-                        Text(String(post.score))
+                        Text(String(post.counts.score))
                     }
-                    .if(post.myVote == .none || post.myVote == .downvoted)
+                    .if(post.myVote == .none || post.myVote == .downvote)
                     { viewProxy in
                         viewProxy
                             .foregroundColor(.accentColor)
                     }
-                    .if(post.myVote == .upvoted)
+                    .if(post.myVote == .upvote)
                     { viewProxy in
                         viewProxy
                             .foregroundColor(.green)
@@ -256,23 +249,33 @@ struct PostItem: View
                         {
                             switch post.myVote
                             {
-                            case .upvoted:
-                                try await ratePost(post: post, operation: .resetVote, account: account, postTracker: postTracker, appState: appState)
-                            case .downvoted:
-                                try await ratePost(post: post, operation: .upvote, account: account, postTracker: postTracker, appState: appState)
-                            case .none:
-                                try await ratePost(post: post, operation: .upvote, account: account, postTracker: postTracker, appState: appState)
+                            case .upvote:
+                                try await ratePost(
+                                    post: post.post,
+                                    operation: .resetVote,
+                                    account: account,
+                                    postTracker: postTracker,
+                                    appState: appState
+                                )
+                            case .downvote, .resetVote, .none:
+                                try await ratePost(
+                                    post: post.post,
+                                    operation: .upvote,
+                                    account: account,
+                                    postTracker: postTracker,
+                                    appState: appState
+                                )
                             }
                         }
                     }
 
                     Image(systemName: "arrow.down")
-                        .if(post.myVote == .downvoted)
+                        .if(post.myVote == .downvote)
                         { viewProxy in
                             viewProxy
                                 .foregroundColor(.red)
                         }
-                        .if(post.myVote == .upvoted || post.myVote == .none)
+                        .if(post.myVote == .upvote || post.myVote == .none)
                         { viewProxy in
                             viewProxy
                                 .foregroundColor(.accentColor)
@@ -283,17 +286,27 @@ struct PostItem: View
                             {
                                 switch post.myVote
                                 {
-                                case .upvoted:
-                                    try await ratePost(post: post, operation: .downvote, account: account, postTracker: postTracker, appState: appState)
-                                case .downvoted:
-                                    try await ratePost(post: post, operation: .resetVote, account: account, postTracker: postTracker, appState: appState)
-                                case .none:
-                                    try await ratePost(post: post, operation: .downvote, account: account, postTracker: postTracker, appState: appState)
+                                case .downvote:
+                                    try await ratePost(
+                                        post: post.post,
+                                        operation: .resetVote,
+                                        account: account,
+                                        postTracker: postTracker,
+                                        appState: appState
+                                    )
+                                case .upvote, .resetVote, .none:
+                                    try await ratePost(
+                                        post: post.post,
+                                        operation: .downvote,
+                                        account: account,
+                                        postTracker: postTracker,
+                                        appState: appState
+                                    )
                                 }
                             }
                         }
 
-                    if let postURL = post.url
+                    if let postURL = post.post.url
                     {
                         ShareButton(urlToShare: postURL, isShowingButtonText: false)
                     }
@@ -307,16 +320,16 @@ struct PostItem: View
                     HStack(spacing: iconToTextSpacing)
                     { // Number of comments
                         Image(systemName: "bubble.left")
-                        Text(String(post.numberOfComments))
+                        Text(String(post.counts.comments))
                     }
 
                     HStack(spacing: iconToTextSpacing)
                     { // Time since posted
                         Image(systemName: "clock")
-                        Text(getTimeIntervalFromNow(date: post.published))
+                        Text(getTimeIntervalFromNow(date: post.post.published))
                     }
 
-                    UserProfileLink(account: account, user: post.author)
+                    UserProfileLink(account: account, user: post.creator)
                 }
                 .foregroundColor(.secondary)
                 .dynamicTypeSize(.small)
